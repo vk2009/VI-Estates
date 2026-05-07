@@ -1,0 +1,13 @@
+{
+  "name": "vi-estates",
+  "version": "1.0.0",
+  "description": "VI Estates Funland with server-side account storage.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^8.5.0",
+    "express": "^4.18.4"
+  }
+}
