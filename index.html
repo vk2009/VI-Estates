@@ -480,50 +480,22 @@
 
   .rate-info { font-size: 0.78rem; color: var(--text-dim); margin-top: 8px; font-style: italic; }
 
-  /* ─── MODAL ─── */
-  .modal {
+  /* ─── LOCKOUT ─── */
+  #lockout-overlay {
     display: none;
     position: fixed;
     inset: 0;
     background: rgba(10,10,20,0.95);
-    z-index: 9999;
+    z-index: 9998;
     align-items: center;
     justify-content: center;
-    padding: 20px;
-  }
-  .modal.show { display: flex; }
-  .modal-content {
-    background: var(--card-bg);
-    border: 1px solid var(--card-border);
-    border-radius: var(--radius);
-    padding: 28px;
-    max-width: 500px;
-    width: 100%;
-    max-height: 80vh;
-    overflow-y: auto;
-  }
-  .modal h2 {
+    text-align: center;
     font-family: 'Cinzel', serif;
-    color: var(--gold);
-    font-size: 1.2rem;
-    margin-bottom: 16px;
   }
-  .modal p {
-    font-size: 0.9rem;
-    line-height: 1.5;
-    margin-bottom: 16px;
-    color: var(--text);
-  }
-  .modal .checkbox-group {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 16px 0;
-  }
-  .modal input[type=checkbox] {
-    width: 16px;
-    height: 16px;
-  }
+  #lockout-overlay.show { display: flex; }
+  #lockout-overlay h2 { color: var(--red-light); font-size: 1.5rem; margin-bottom: 12px; }
+  #lockout-overlay p { color: var(--text-dim); margin-bottom: 20px; }
+  #lockout-timer { font-family: 'Cinzel Decorative', cursive; font-size: 2.5rem; color: var(--gold); }
 
   /* progress bar */
   .xp-bar { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; margin-top: 10px; overflow: hidden; }
@@ -647,10 +619,6 @@
           <div class="stat-value purple" id="stat-dbl">0</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Doubloons Owed</div>
-          <div class="stat-value red" id="stat-owed">0</div>
-        </div>
-        <div class="stat-card">
           <div class="stat-label">Total Wins</div>
           <div class="stat-value green" id="stat-wins">0</div>
         </div>
@@ -710,36 +678,10 @@
         </div>
       </div>
 
-      <!-- Roulette -->
+      <!-- History -->
       <div class="card">
-        <h2>🎡 Roulette Wheel</h2>
-        <div id="roulette-game">
-          <div style="text-align:center;margin-bottom:20px">
-            <div id="roulette-wheel" style="width:200px;height:200px;border:4px solid var(--gold);border-radius:50%;margin:0 auto 16px;position:relative;background:conic-gradient(from 0deg, red 0deg 18deg, black 18deg 36deg, red 36deg 54deg, black 54deg 72deg, red 72deg 90deg, black 90deg 108deg, red 108deg 126deg, black 126deg 144deg, red 144deg 162deg, black 162deg 180deg, red 180deg 198deg, black 198deg 216deg, red 216deg 234deg, black 234deg 252deg, red 252deg 270deg, black 270deg 288deg, red 288deg 306deg, black 306deg 324deg, red 324deg 342deg, black 342deg 360deg);">
-              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:20px;height:20px;background:var(--gold);border-radius:50%;"></div>
-              <div id="roulette-pointer" style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:20px solid var(--gold);"></div>
-            </div>
-            <div id="roulette-result" style="font-family:'Cinzel Decorative',cursive;font-size:1.2rem;margin:10px 0"></div>
-          </div>
-          <div style="display:flex;justify-content:center;gap:16px;margin-bottom:16px">
-            <button class="bet-btn" onclick="changeRouletteBet(-10)">−</button>
-            <div id="roulette-bet-display">10 pts</div>
-            <button class="bet-btn" onclick="changeRouletteBet(10)">+</button>
-          </div>
-          <div style="text-align:center;margin-bottom:16px">
-            <select id="roulette-bet-type">
-              <option value="red">Red (1:1)</option>
-              <option value="black">Black (1:1)</option>
-              <option value="even">Even (1:1)</option>
-              <option value="odd">Odd (1:1)</option>
-              <option value="1-18">1-18 (1:1)</option>
-              <option value="19-36">19-36 (1:1)</option>
-              <option value="single">Single Number (35:1)</option>
-            </select>
-            <input type="number" id="single-number" min="0" max="36" placeholder="0-36" style="width:80px;margin-left:8px;display:none">
-          </div>
-          <button id="roulette-spin-btn" class="btn" onclick="spinRoulette()">🎡 SPIN ROULETTE</button>
-        </div>
+        <h2>📜 Recent Spins</h2>
+        <div id="history-list"><div style="color:var(--text-dim);font-size:0.85rem;font-style:italic">No spins yet — try your luck!</div></div>
       </div>
     </div>
 
@@ -788,7 +730,7 @@
             <div class="convert-result" id="convert-result">0 pts</div>
           </div>
         </div>
-        <p class="rate-info">Exchange rate: 100 Doubloons = 150 Casino Points &nbsp;|&nbsp; Min: 1 DBL &nbsp;|&nbsp; Max: 10,000 DBL/day</p>
+        <p class="rate-info">Exchange rate: 1 Doubloon = 2.5 Casino Points &nbsp;|&nbsp; Min: 1 DBL &nbsp;|&nbsp; Max: 10,000 DBL/day</p>
         <div id="convert-error" class="error-msg" style="margin-top:8px"></div>
         <button class="btn" style="margin-top:16px;max-width:240px" onclick="doConvert()">Convert Now</button>
         <div style="margin-top:14px">
@@ -796,17 +738,12 @@
           <div style="font-family:'Cinzel Decorative',cursive;font-size:1.6rem;color:#c084fc" id="dbl-balance-display">0</div>
           <div style="font-size:0.75rem;color:var(--text-dim);margin-top:4px;font-family:'Cinzel',serif">Converted today: <span id="dbl-today">0</span> / 10,000</div>
         </div>
-        <div class="divider">transfer</div>
-        <div style="margin-bottom:16px">
-          <label>Transfer Doubloons (Current Owed: <span id="transfer-owed">0</span>)</label>
-          <input type="number" id="transfer-amount" min="0" placeholder="0" style="margin-top:8px">
+        <div class="divider">top up</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-secondary" style="flex:1;min-width:100px" onclick="buyDoubloons(100)">+100 🪙</button>
+          <button class="btn-secondary" style="flex:1;min-width:100px" onclick="buyDoubloons(500)">+500 🪙</button>
+          <button class="btn-secondary" style="flex:1;min-width:100px" onclick="buyDoubloons(1000)">+1,000 🪙</button>
         </div>
-        <div class="checkbox-group" style="margin-bottom:16px">
-          <input type="checkbox" id="transfer-accept">
-          <label for="transfer-accept">I willingly and legally transfer these doubloons</label>
-        </div>
-        <div id="transfer-error" class="error-msg" style="margin-bottom:8px"></div>
-        <button class="btn" style="max-width:240px" onclick="transferDoubloons()">Transfer Doubloons</button>
       </div>
 
       <!-- Change password -->
@@ -859,26 +796,6 @@
   </div>
 </div>
 
-<!-- Terms Modal -->
-<div id="terms-modal" class="modal">
-  <div class="modal-content">
-    <h2>📜 Terms & Conditions</h2>
-    <p>Welcome to VI Estates Funland. By proceeding, you agree to the following terms:</p>
-    <ul style="font-size:0.9rem; line-height:1.5; margin-bottom:16px;">
-      <li>All gambling activities are for entertainment purposes only.</li>
-      <li>You must be of legal age to participate.</li>
-      <li>All doubloons owed is legally binding for the Los Khangeles jurisdiction.</li>
-      <li>The house always wins in the long run.</li>
-      <li>Management reserves the right to modify terms at any time.</li>
-    </ul>
-    <div class="checkbox-group">
-      <input type="checkbox" id="terms-accept">
-      <label for="terms-accept">I have read and agree to the terms & conditions</label>
-    </div>
-    <button class="btn" onclick="acceptTerms()">Accept & Continue</button>
-  </div>
-</div>
-
 <div id="toast"></div>
 
 <script>
@@ -905,7 +822,7 @@ const PAYOUTS = {
 };
 const TIER_THRESHOLDS = { bronze:0, silver:500, gold:2000, platinum:10000 };
 const TIER_BONUSES    = { bronze:1, silver:1.10, gold:1.25, platinum:1.50 };
-const DBL_RATE        = 1.5;  // 1 Doubloon = 1.5 pts (100 DBL = 150 pts)
+const DBL_RATE        = 2.5;  // 1 Doubloon = 2.5 pts
 const DBL_DAILY_LIMIT = 10000;
 
 // ── Storage helpers ──
@@ -1172,7 +1089,6 @@ async function doRegister() {
     username, email, salt, hash,
     points: 200,           // welcome bonus
     doubloons: 500,        // starter doubloons
-    owedDoubloons: 0,      // starts at 0
     totalWins: 0,
     totalSpins: 0,
     biggestWin: 0,
@@ -1258,8 +1174,10 @@ async function loginAs(userKey) {
   document.getElementById('login-pass').value = '';
   document.getElementById('login-captcha-ans').value = '';
 
-  // Show terms modal before proceeding
-  document.getElementById('terms-modal').classList.add('show');
+  initReels();
+  updateDashboard();
+  showSection('dashboard');
+  document.getElementById('auth-section').classList.remove('active');
 }
 
 function logout() {
@@ -1280,12 +1198,7 @@ function currentUser() {
   const k = currentUserKey();
   if (!k) return null;
   const db = loadDB();
-  const u = db.users ? db.users[k] : null;
-  if (u && u.owedDoubloons === undefined) {
-    u.owedDoubloons = 0;
-    saveUser(u);
-  }
-  return u;
+  return db.users ? db.users[k] : null;
 }
 function saveUser(user) {
   const k = currentUserKey();
@@ -1319,7 +1232,6 @@ function updateDashboard() {
   if (!u) return;
   document.getElementById('stat-pts').textContent  = u.points.toLocaleString();
   document.getElementById('stat-dbl').textContent  = u.doubloons.toLocaleString();
-  document.getElementById('stat-owed').textContent = (u.owedDoubloons || 0).toLocaleString();
   document.getElementById('stat-wins').textContent = u.totalWins.toLocaleString();
   const tier = getTier(u.points);
   document.getElementById('stat-tier').textContent = tier.charAt(0).toUpperCase() + tier.slice(1);
@@ -1370,8 +1282,6 @@ function updateAccount() {
   const today = new Date().toDateString();
   if (u.dblConvertDate !== today) { u.dblConvertedToday = 0; u.dblConvertDate = today; saveUser(u); }
   document.getElementById('dbl-today').textContent = (u.dblConvertedToday||0).toLocaleString();
-
-  document.getElementById('transfer-owed').textContent = (u.owedDoubloons || 0).toLocaleString();
 
   document.getElementById('sec-user').textContent    = u.username;
   document.getElementById('sec-created').textContent = new Date(u.created).toLocaleDateString();
@@ -1468,73 +1378,18 @@ async function changePassword() {
   document.getElementById('chg-new2').value = '';
 }
 
-// ── Terms Acceptance ──
-function acceptTerms() {
-  if (!document.getElementById('terms-accept').checked) {
-    showToast('You must accept the terms to continue.');
-    return;
-  }
-  document.getElementById('terms-modal').classList.remove('show');
-  document.getElementById('terms-accept').checked = false;
-  initReels();
-  updateDashboard();
-  showSection('dashboard');
-  document.getElementById('auth-section').classList.remove('active');
-}
-
-// ── Transfer Doubloons ──
-function transferDoubloons() {
-  const u = currentUser();
-  if (!u) return;
-  const amount = parseInt(document.getElementById('transfer-amount').value) || 0;
-  const accepted = document.getElementById('transfer-accept').checked;
-  const errEl = document.getElementById('transfer-error');
-
-  errEl.classList.remove('show');
-
-  if (amount <= 0) {
-    errEl.textContent = 'Transfer amount must be greater than 0.';
-    errEl.classList.add('show');
-    return;
-  }
-  if (!accepted) {
-    errEl.textContent = 'You must accept the transfer terms.';
-    errEl.classList.add('show');
-    return;
-  }
-
-  u.owedDoubloons = (u.owedDoubloons || 0) + amount;
-  saveUser(u);
-  document.getElementById('transfer-amount').value = '';
-  document.getElementById('transfer-accept').checked = false;
-  updateAccount();
-  updateDashboard();
-  showToast(`Transferred ${amount.toLocaleString()} doubloons. Now owed: ${(u.owedDoubloons || 0).toLocaleString()}`);
-}
-
 // ── SLOTS ENGINE ──
 let spinning = false;
 let currentBet = 10;
 let reelStrips = [];
-
-// ── ROULETTE ENGINE ──
-let rouletteSpinning = false;
-let currentRouletteBet = 10;
-let rouletteBetType = 'red';
-
-const ROULETTE_NUMBERS = [
-  0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26
-];
-const RED_NUMBERS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
-const BLACK_NUMBERS = [2,4,6,8,10,11,13,15,17,20,22,24,26,28,29,31,33,35];
 
 const REEL_STRIP_LEN = 24;
 
 function buildStrip() {
   const strip = [];
   for (let i = 0; i < REEL_STRIP_LEN; i++) {
-    // Weighted distribution: 💎 rarest, 🔔 most common (house-favored)
-    const weights = [1,1,2,3,4,5,7,15]; // corresponds to SYMBOLS order
+    // Weighted distribution: 💎 rarest, 🔔 most common
+    const weights = [1,2,3,4,5,6,8,10]; // corresponds to SYMBOLS order
     let total = weights.reduce((a,b)=>a+b,0);
     let r = Math.random() * total;
     let idx = 0;
@@ -1569,117 +1424,6 @@ function changeBet(delta) {
   currentBet = Math.max(10, Math.min(u.points, currentBet + delta));
   currentBet = Math.round(currentBet / 10) * 10;
   document.getElementById('bet-display').textContent = currentBet.toLocaleString() + ' pts';
-}
-
-// ── ROULETTE FUNCTIONS ──
-function changeRouletteBet(delta) {
-  const u = currentUser();
-  if (!u) return;
-  currentRouletteBet = Math.max(10, Math.min(u.points, currentRouletteBet + delta));
-  currentRouletteBet = Math.round(currentRouletteBet / 10) * 10;
-  document.getElementById('roulette-bet-display').textContent = currentRouletteBet.toLocaleString() + ' pts';
-}
-
-function updateRouletteBetType() {
-  rouletteBetType = document.getElementById('roulette-bet-type').value;
-  const singleInput = document.getElementById('single-number');
-  singleInput.style.display = rouletteBetType === 'single' ? 'inline-block' : 'none';
-}
-
-document.getElementById('roulette-bet-type').addEventListener('change', updateRouletteBetType);
-
-function spinRoulette() {
-  if (rouletteSpinning) return;
-  const u = currentUser();
-  if (!u) return;
-
-  if (u.points < currentRouletteBet) {
-    showToast('Not enough points!');
-    return;
-  }
-
-  rouletteSpinning = true;
-  const spinBtn = document.getElementById('roulette-spin-btn');
-  spinBtn.disabled = true;
-  document.getElementById('roulette-result').textContent = 'Spinning...';
-
-  // Deduct bet
-  u.points -= currentRouletteBet;
-  u.totalSpins = (u.totalSpins || 0) + 1;
-  saveUser(u);
-  updateDashboard();
-
-  // House-favored result: bias towards losing
-  let result;
-  const rand = Math.random();
-  if (rand < 0.48) { // 48% chance to lose
-    if (rouletteBetType === 'red') result = BLACK_NUMBERS[Math.floor(Math.random() * BLACK_NUMBERS.length)];
-    else if (rouletteBetType === 'black') result = RED_NUMBERS[Math.floor(Math.random() * RED_NUMBERS.length)];
-    else if (rouletteBetType === 'even') result = 2 * Math.floor(Math.random() * 18) + 1; // odd
-    else if (rouletteBetType === 'odd') result = 2 * Math.floor(Math.random() * 18); // even
-    else if (rouletteBetType === '1-18') result = 19 + Math.floor(Math.random() * 18);
-    else if (rouletteBetType === '19-36') result = Math.floor(Math.random() * 18) + 1;
-    else if (rouletteBetType === 'single') {
-      const target = parseInt(document.getElementById('single-number').value) || 0;
-      do { result = Math.floor(Math.random() * 37); } while (result === target);
-    } else result = Math.floor(Math.random() * 37);
-  } else {
-    // 52% chance to win, but with lower payout due to house edge
-    if (rouletteBetType === 'red') result = RED_NUMBERS[Math.floor(Math.random() * RED_NUMBERS.length)];
-    else if (rouletteBetType === 'black') result = BLACK_NUMBERS[Math.floor(Math.random() * BLACK_NUMBERS.length)];
-    else if (rouletteBetType === 'even') result = 2 * Math.floor(Math.random() * 18); // even
-    else if (rouletteBetType === 'odd') result = 2 * Math.floor(Math.random() * 18) + 1; // odd
-    else if (rouletteBetType === '1-18') result = Math.floor(Math.random() * 18) + 1;
-    else if (rouletteBetType === '19-36') result = 19 + Math.floor(Math.random() * 18);
-    else if (rouletteBetType === 'single') result = parseInt(document.getElementById('single-number').value) || 0;
-    else result = Math.floor(Math.random() * 37);
-  }
-
-  // Animate wheel
-  const wheel = document.getElementById('roulette-wheel');
-  const duration = 3000 + Math.random() * 2000;
-  const rotations = 5 + Math.random() * 3;
-  const finalAngle = (result * 9.73) + (Math.random() * 9.73); // Approximate angle per number
-
-  wheel.style.transition = `transform ${duration}ms cubic-bezier(0.25, 0.1, 0.25, 1)`;
-  wheel.style.transform = `rotate(${360 * rotations + finalAngle}deg)`;
-
-  setTimeout(() => {
-    // Calculate payout
-    let payout = 0;
-    let win = false;
-
-    if (rouletteBetType === 'red' && RED_NUMBERS.includes(result)) { payout = currentRouletteBet * 2; win = true; }
-    else if (rouletteBetType === 'black' && BLACK_NUMBERS.includes(result)) { payout = currentRouletteBet * 2; win = true; }
-    else if (rouletteBetType === 'even' && result > 0 && result % 2 === 0) { payout = currentRouletteBet * 2; win = true; }
-    else if (rouletteBetType === 'odd' && result % 2 === 1) { payout = currentRouletteBet * 2; win = true; }
-    else if (rouletteBetType === '1-18' && result >= 1 && result <= 18) { payout = currentRouletteBet * 2; win = true; }
-    else if (rouletteBetType === '19-36' && result >= 19 && result <= 36) { payout = currentRouletteBet * 2; win = true; }
-    else if (rouletteBetType === 'single' && result === (parseInt(document.getElementById('single-number').value) || 0)) { payout = currentRouletteBet * 36; win = true; }
-
-    u.points += payout;
-    if (win) {
-      u.totalWins = (u.totalWins || 0) + 1;
-      u.biggestWin = Math.max(u.biggestWin || 0, payout);
-    }
-
-    saveUser(u);
-
-    const resultEl = document.getElementById('roulette-result');
-    if (win) {
-      resultEl.textContent = `🎉 ${result} - You win ${payout.toLocaleString()} pts!`;
-      resultEl.style.color = '#4ade80';
-      if (payout >= currentRouletteBet * 10) launchConfetti(30);
-    } else {
-      resultEl.textContent = `${result} - House wins!`;
-      resultEl.style.color = '#f87171';
-    }
-
-    updateDashboard();
-    rouletteSpinning = false;
-    spinBtn.disabled = false;
-    wheel.style.transition = '';
-  }, duration);
 }
 
 function pickResult() {
@@ -1847,7 +1591,6 @@ setInterval(() => {
 // ── Init ──
 refreshLoginCaptcha();
 refreshRegCaptcha();
-updateRouletteBetType();
 
 const existingSession = getSession();
 if (existingSession) {
