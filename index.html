@@ -21,6 +21,7 @@
       <span class="pill" id="hdr-tier">Bronze</span>
       <button class="btn-sm" onclick="showSection('dashboard')">Casino</button>
       <button class="btn-sm" onclick="showSection('account')">Account</button>
+      <span id="admin-btn" style="display:none"><button class="btn-sm" onclick="showSection('admin')">Admin</button></span>
       <button class="btn-sm" onclick="logout()">Sign Out</button>
     </div>
   </header>
@@ -139,6 +140,7 @@
       <div class="card">
         <h2>🎰 Slot Machine</h2>
         <div id="slot-machine">
+          <div style="text-align:center;margin-bottom:10px;font-family:'Cinzel',serif;font-size:0.9rem;color:var(--text-dim)">Doubloon Balance: <span id="slot-dbl-balance" style="color:var(--gold)">0</span></div>
           <div class="spin-line"></div>
           <div class="reels-container" id="reels">
             <div class="reel-wrapper"><div class="reel" id="reel-0"></div></div>
@@ -163,14 +165,15 @@
               <tr><th>Combination</th><th>Multiplier</th><th>Description</th></tr>
             </thead>
             <tbody>
-              <tr><td class="sym">💎💎💎</td><td class="mult">×50</td><td>Diamond Jackpot</td></tr>
-              <tr><td class="sym">👑👑👑</td><td class="mult">×25</td><td>Royal Flush</td></tr>
-              <tr><td class="sym">⚓⚓⚓</td><td class="mult">×15</td><td>Anchor Storm</td></tr>
-              <tr><td class="sym">🌟🌟🌟</td><td class="mult">×10</td><td>Star Alignment</td></tr>
-              <tr><td class="sym">🍀🍀🍀</td><td class="mult">×8</td><td>Triple Clover</td></tr>
-              <tr><td class="sym">🎲🎲🎲</td><td class="mult">×6</td><td>Lucky Dice</td></tr>
-              <tr><td class="sym">🍒🍒🍒</td><td class="mult">×4</td><td>Cherry Trio</td></tr>
-              <tr><td class="sym">Any pair</td><td class="mult">×1.5</td><td>Two of a Kind</td></tr>
+              <tr><td class="sym">💎💎💎</td><td class="mult">×4.0</td><td>Diamond Jackpot</td></tr>
+              <tr><td class="sym">👑👑👑</td><td class="mult">×3.5</td><td>Royal Flush</td></tr>
+              <tr><td class="sym">⚓⚓⚓</td><td class="mult">×3.0</td><td>Anchor Storm</td></tr>
+              <tr><td class="sym">🌟🌟🌟</td><td class="mult">×2.8</td><td>Star Alignment</td></tr>
+              <tr><td class="sym">🍀🍀🍀</td><td class="mult">×2.6</td><td>Triple Clover</td></tr>
+              <tr><td class="sym">🎲🎲🎲</td><td class="mult">×2.4</td><td>Lucky Dice</td></tr>
+              <tr><td class="sym">🍒🍒🍒</td><td class="mult">×2.2</td><td>Cherry Trio</td></tr>
+              <tr><td class="sym">🔔🔔🔔</td><td class="mult">×2.0</td><td>Bell Ringer</td></tr>
+              <tr><td class="sym">🔔🔔</td><td class="mult">×0.5</td><td>Two of a Kind</td></tr>
             </tbody>
           </table>
         </div>
@@ -228,7 +231,7 @@
             <div class="convert-result" id="convert-result">0 pts</div>
           </div>
         </div>
-        <p class="rate-info">Exchange rate: 1 Doubloon = 2.5 Casino Points &nbsp;|&nbsp; Min: 1 DBL &nbsp;|&nbsp; Max: 10,000 DBL/day</p>
+        <p class="rate-info">Exchange rate: 1 Doubloon = 2 Casino Points &nbsp;|&nbsp; Min: 1 DBL &nbsp;|&nbsp; Max: 10,000 DBL/day</p>
         <div id="convert-error" class="error-msg" style="margin-top:8px"></div>
         <button class="btn" style="margin-top:16px;max-width:240px" onclick="doConvert()">Convert Now</button>
         <div style="margin-top:14px">
@@ -236,12 +239,21 @@
           <div style="font-family:'Cinzel Decorative',cursive;font-size:1.6rem;color:#c084fc" id="dbl-balance-display">0</div>
           <div style="font-size:0.75rem;color:var(--text-dim);margin-top:4px;font-family:'Cinzel',serif">Converted today: <span id="dbl-today">0</span> / 10,000</div>
         </div>
-        <div class="divider">top up</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn-secondary" style="flex:1;min-width:100px" onclick="buyDoubloons(100)">+100 🪙</button>
-          <button class="btn-secondary" style="flex:1;min-width:100px" onclick="buyDoubloons(500)">+500 🪙</button>
-          <button class="btn-secondary" style="flex:1;min-width:100px" onclick="buyDoubloons(1000)">+1,000 🪙</button>
+      </div>
+
+      <!-- Cashout -->
+      <div class="card">
+        <h2>💰 Cashout</h2>
+        <p style="font-size:0.88rem;color:var(--text-dim);margin-bottom:18px">Cash out all your casino points for doubloons at 2 points = 1 doubloon.</p>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <span style="font-family:'Cinzel',serif;font-size:0.9rem;color:var(--text-dim)">Current Points:</span>
+          <span style="font-family:'Cinzel Decorative',cursive;font-size:1.2rem;color:var(--gold)" id="cashout-pts">0</span>
         </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <span style="font-family:'Cinzel',serif;font-size:0.9rem;color:var(--text-dim)">Doubloons to Receive:</span>
+          <span style="font-family:'Cinzel Decorative',cursive;font-size:1.2rem;color:#c084fc" id="cashout-dbl">0</span>
+        </div>
+        <button class="btn" style="max-width:200px" onclick="doCashout()">Cash Out All</button>
       </div>
 
       <!-- Change password -->
@@ -281,6 +293,48 @@
 
     </div>
 
+    <!-- ══════════════ ADMIN ══════════════ -->
+    <div id="admin-section" class="section">
+      <div class="card">
+        <h2>� Casino Profits</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <span style="font-family:'Cinzel',serif;font-size:0.9rem;color:var(--text-dim)">Total User Doubloons:</span>
+          <span style="font-family:'Cinzel Decorative',cursive;font-size:1.2rem;color:var(--gold)" id="total-dbl">0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <span style="font-family:'Cinzel',serif;font-size:0.9rem;color:var(--text-dim)">Net Profit/Loss:</span>
+          <span style="font-family:'Cinzel Decorative',cursive;font-size:1.2rem;" id="net-profit">0</span>
+        </div>
+        <p style="font-size:0.88rem;color:var(--text-dim)">If negative, casino has profit (users owe). If positive, casino has debt.</p>
+        <button class="btn-secondary" style="margin-top:16px" onclick="logout()">🚪 Sign Out</button>
+      </div>
+
+      <div class="card">
+        <h2>�👑 Master Admin Panel</h2>
+        <p style="font-size:0.88rem;color:var(--text-dim);margin-bottom:18px">View all casino accounts and data (read-only).</p>
+        <div style="overflow-x:auto">
+          <table class="pay-table" id="admin-table">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Points</th>
+                <th>Doubloons</th>
+                <th>Tier</th>
+                <th>Total Wins</th>
+                <th>Biggest Win</th>
+                <th>Total Spins</th>
+                <th>Created</th>
+              </tr>
+            </thead>
+            <tbody id="admin-tbody">
+              <!-- populated by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -315,6 +369,10 @@
 
 <div id="toast"></div>
 
+<!-- Supabase client (CDN) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/index.min.js"></script>
+<!-- Local env shim -->
+<script src="envlocal.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

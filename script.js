@@ -16,8 +16,8 @@
 // ── Symbols & pay table ──
 const SYMBOLS = ['💎','👑','⚓','🌟','🍀','🎲','🍒','🔔'];
 const PAYOUTS = {
-  '💎': 50, '👑': 25, '⚓': 15, '🌟': 10,
-  '🍀': 8,  '🎲': 6,  '🍒': 4,  '🔔': 3
+  '💎': 4.0, '👑': 3.5, '⚓': 3.0, '🌟': 2.8,
+  '🍀': 2.6,  '🎲': 2.4,  '🍒': 2.2,  '🔔': 2.0
 };
 const TIER_THRESHOLDS = { bronze:0, silver:500, gold:2000, platinum:10000 };
 const TIER_BONUSES    = { bronze:1, silver:1.10, gold:1.25, platinum:1.50 };
@@ -28,6 +28,7 @@ const DBL_DAILY_LIMIT = 10000;
 const DB_KEY = 'ga_casino_db';
 
 function loadDB() {
+  // If supabase is configured, we won't use loadDB for server data. Keep as local fallback.
   try { return JSON.parse(localStorage.getItem(DB_KEY)) || {}; }
   catch { return {}; }
 }
@@ -46,12 +47,92 @@ function randomToken(len=32) {
   return Array.from(arr).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 
+// ── Supabase init (optional) ──
+// This will look for a global `ENV` object (you can set this from a small envlocal.js that defines window.ENV = { SUPABASE_URL:'', SUPABASE_ANON_KEY:'' })
+let supabase = null;
+function initSupabase() {
+  try {
+    const env = window.ENV || {};
+    const url = env.SUPABASE_URL || env.SUPABASE_URL?.trim();
+    const key = env.SUPABASE_ANON_KEY || env.SUPABASE_ANON_KEY?.trim();
+    if (!url || !key) return null;
+    // Load supabase client from CDN if not present
+    if (typeof createClient === 'undefined') {
+      // assume <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script> is included in index.html
+      console.warn('Supabase client not found. Please include supabase-js or set up window.SUPABASE_CLIENT. Falling back to localStorage.');
+      return null;
+    }
+    supabase = createClient(url, key);
+    // set up auth state listener and initial profile load
+    try {
+      // get current session and user
+      supabase.auth.getSession().then(({ data }) => {
+        const user = data?.session?.user || null;
+        if (user) {
+          fetchProfileForUser(user).then(() => updateDashboard()).catch(()=>{});
+        }
+      }).catch(()=>{});
+
+      supabase.auth.onAuthStateChange((event, session) => {
+        const user = session?.user || null;
+        if (event === 'SIGNED_OUT') {
+          currentUserCache = null;
+          // reflect UI
+          try { updateDashboard(); } catch(e){}
+        }
+        if (user) {
+          fetchProfileForUser(user).then(() => {
+            try { updateDashboard(); } catch(e){}
+          }).catch(()=>{});
+        }
+      });
+    } catch (e) { /* non-fatal */ }
+    return supabase;
+  } catch (e) {
+    console.warn('Supabase init failed', e);
+    return null;
+  }
+}
+
+// Initialize on load (non-blocking)
+try { initSupabase(); } catch (e) { /* ignore */ }
+
 // ── Session (sessionStorage — dies on tab close) ──
 const SESSION_KEY = 'ga_session';
 const SESSION_TTL = 30 * 60 * 1000; // 30 min
 
-function getSession() {
+// Supabase-backed current user cache (profile data from 'users' table)
+let currentUserCache = null;
+
+async function fetchProfileForUser(supUser) {
+  if (!supabase || !supUser) return null;
+  // Try to find profile by auth user id or email
   try {
+    // Prefer a 'profiles' or 'users' table keyed by id or email
+    const { data, error } = await supabase.from('users').select('*').or(`id.eq.${supUser.id},email.eq.${supUser.email}`).limit(1).single();
+    if (error || !data) {
+      // If not found, create a profile
+      const username = supUser.user_metadata?.username || supUser.email.split('@')[0];
+      const insert = { id: supUser.id, username, email: supUser.email, points: 0, doubloons: 0, created_at: new Date().toISOString() };
+      const r = await supabase.from('users').insert([insert]).select().single();
+      currentUserCache = r.data || insert;
+      return currentUserCache;
+    }
+    currentUserCache = data;
+    return currentUserCache;
+  } catch (e) {
+    console.warn('Profile fetch/create error', e);
+    return null;
+  }
+}
+
+function getSession() {
+  // Prefer Supabase session (async) — but keep a synchronous fallback
+  try {
+    // If supabase is available and we have a cached profile, return a minimal session-like object
+    if (supabase && currentUserCache) {
+      return { username: currentUserCache.username, started: Date.now(), lastActive: Date.now() };
+    }
     const s = JSON.parse(sessionStorage.getItem(SESSION_KEY));
     if (!s) return null;
     if (Date.now() - s.lastActive > SESSION_TTL) { clearSession(); return null; }
@@ -60,6 +141,7 @@ function getSession() {
 }
 
 function setSession(username) {
+  // Keep a minimal session for UI when not using Supabase auth
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({
     username, token: randomToken(), started: Date.now(), lastActive: Date.now()
   }));
@@ -71,6 +153,14 @@ function refreshSession() {
 }
 
 function clearSession() { sessionStorage.removeItem(SESSION_KEY); }
+
+// Supabase logout helper
+async function supabaseLogout() {
+  if (!supabase) return;
+  try { await supabase.auth.signOut(); } catch (e) { console.warn('Supabase signOut failed', e); }
+  currentUserCache = null;
+  clearSession();
+}
 
 // Refresh session on activity
 document.addEventListener('click', refreshSession);
@@ -217,6 +307,7 @@ function showSection(name) {
   document.getElementById(name+'-section').classList.add('active');
   if (name==='dashboard') updateDashboard();
   if (name==='account')   updateAccount();
+  if (name==='admin')     updateAdmin();
 }
 
 // ── Toast notification ──
@@ -266,6 +357,24 @@ async function doRegister() {
     errEl.classList.add('show'); return;
   }
 
+  // If Supabase is initialized, use Supabase Auth to create the user
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.auth.signUp({ email, password: pw, options: { data: { username } } });
+      if (error) {
+        errEl.textContent = sanitise(error.message || 'Registration failed.');
+        errEl.classList.add('show'); refreshRegCaptcha(); return;
+      }
+      sucEl.textContent = '🎉 Welcome aboard! Please check your email to confirm your account.';
+      sucEl.classList.add('show');
+      refreshRegCaptcha();
+      return;
+    } catch (e) {
+      errEl.textContent = 'Registration error.'; errEl.classList.add('show'); refreshRegCaptcha(); return;
+    }
+  }
+
+  // Fallback: localStorage-based register (legacy)
   const db = loadDB();
 
   // Uniqueness check
@@ -279,14 +388,14 @@ async function doRegister() {
     errEl.classList.add('show'); refreshRegCaptcha(); return;
   }
 
-  // Hash password with salt
+  // Hash password with salt (local fallback)
   const salt = randomToken(16);
   const hash = await sha256(salt + pw + 'ga_casino_pepper_x9k2');
 
   if (!db.users) db.users = {};
   db.users[usernameLower] = {
     username, email, salt, hash,
-    points: 200,           // welcome bonus
+    points: 0,           // welcome bonus
     doubloons: 0,        // starter doubloons
     totalWins: 0,
     totalSpins: 0,
@@ -327,11 +436,44 @@ async function doLogin() {
     refreshLoginCaptcha(); return;
   }
 
+  // Master login
+  if (input === 'master' && pw === 'sellproperty123!') {
+    setSession('master');
+    showSection('admin');
+    updateAdmin();
+    return;
+  }
+
   if (!input || !pw) {
     errEl.textContent = 'Please enter your username/email and password.';
     errEl.classList.add('show'); return;
   }
 
+  // If supabase is available, use Supabase Auth
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email: input, password: pw });
+      if (error) {
+        recordFailedAttempt();
+        errEl.textContent = sanitise(error.message || 'Invalid username or password.');
+        errEl.classList.add('show'); refreshLoginCaptcha(); return;
+      }
+      clearFailedAttempts();
+      const supUser = data.user;
+      if (supUser) {
+        // fetch profile and populate cache
+        await fetchProfileForUser(supUser);
+        setSession(supUser.email);
+        await loginAs(supUser.id);
+      }
+      return;
+    } catch (e) {
+      recordFailedAttempt();
+      errEl.textContent = 'Login error.'; errEl.classList.add('show'); refreshLoginCaptcha(); return;
+    }
+  }
+
+  // Fallback: localStorage auth
   const db = loadDB();
   if (!db.users) {
     recordFailedAttempt();
@@ -367,6 +509,15 @@ async function doLogin() {
 }
 
 async function loginAs(userKey) {
+  // If supabase is used, try to ensure currentUserCache is populated
+  if (supabase && !currentUserCache) {
+    try {
+      const s = await supabase.auth.getSession();
+      const supUser = s?.data?.session?.user || null;
+      if (supUser) await fetchProfileForUser(supUser);
+    } catch (e) { /* ignore */ }
+  }
+
   setSession(userKey);
   document.getElementById('user-bar').style.display = 'flex';
   document.getElementById('login-error').classList.remove('show');
@@ -380,6 +531,16 @@ async function loginAs(userKey) {
 }
 
 function logout() {
+  if (supabase) {
+    supabaseLogout().then(() => {
+      document.getElementById('user-bar').style.display = 'none';
+      showSection('auth');
+      refreshLoginCaptcha();
+      document.getElementById('login-user').value = '';
+      document.getElementById('login-pass').value = '';
+    });
+    return;
+  }
   clearSession();
   document.getElementById('user-bar').style.display = 'none';
   showSection('auth');
@@ -396,12 +557,22 @@ function currentUserKey() {
 function currentUser() {
   const k = currentUserKey();
   if (!k) return null;
+  if (supabase && currentUserCache) return currentUserCache;
   const db = loadDB();
   return db.users ? db.users[k] : null;
 }
 function saveUser(user) {
   const k = currentUserKey();
   if (!k) return;
+  // If supabase is configured, update the server and cache
+  if (supabase && currentUserCache) {
+    try {
+      const updateObj = { points: user.points, doubloons: user.doubloons, total_wins: user.totalWins, total_spins: user.totalSpins, biggest_win: user.biggestWin };
+      supabase.from('users').update(updateObj).eq('id', currentUserCache.id).then(() => {});
+      // update cache
+      currentUserCache = Object.assign({}, currentUserCache, updateObj);
+    } catch (e) { /* ignore and fallback to local */ }
+  }
   const db = loadDB();
   db.users[k] = user;
   saveDB(db);
@@ -423,6 +594,7 @@ function updateHeader() {
   document.getElementById('hdr-name').textContent = u.username;
   document.getElementById('hdr-pts').textContent  = u.points.toLocaleString() + ' pts';
   document.getElementById('hdr-tier').textContent  = getTier(u.points).charAt(0).toUpperCase() + getTier(u.points).slice(1);
+  document.getElementById('admin-btn').style.display = u.username === 'master' ? '' : 'none';
 }
 
 // ── Update dashboard ──
@@ -434,6 +606,7 @@ function updateDashboard() {
   document.getElementById('stat-wins').textContent = u.totalWins.toLocaleString();
   const tier = getTier(u.points);
   document.getElementById('stat-tier').textContent = tier.charAt(0).toUpperCase() + tier.slice(1);
+  document.getElementById('slot-dbl-balance').textContent = u.doubloons.toLocaleString();
   updateHeader();
 
   // XP bar
@@ -482,6 +655,11 @@ function updateAccount() {
   if (u.dblConvertDate !== today) { u.dblConvertedToday = 0; u.dblConvertDate = today; saveUser(u); }
   document.getElementById('dbl-today').textContent = (u.dblConvertedToday||0).toLocaleString();
 
+  // Cashout
+  const cashoutDbl = Math.floor(u.points / 2);
+  document.getElementById('cashout-pts').textContent = u.points.toLocaleString();
+  document.getElementById('cashout-dbl').textContent = cashoutDbl.toLocaleString();
+
   document.getElementById('sec-user').textContent    = u.username;
   document.getElementById('sec-created').textContent = new Date(u.created).toLocaleDateString();
   document.getElementById('sec-spins').textContent   = u.totalSpins || 0;
@@ -521,7 +699,6 @@ function doConvert() {
   if (u.dblConvertDate !== today) { u.dblConvertedToday = 0; u.dblConvertDate = today; }
 
   if (v < 1) { errEl.textContent = 'Minimum 1 Doubloon.'; errEl.classList.add('show'); return; }
-  if (v > u.doubloons) { errEl.textContent = 'Insufficient Doubloons.'; errEl.classList.add('show'); return; }
   if ((u.dblConvertedToday||0) + v > DBL_DAILY_LIMIT) {
     errEl.textContent = `Daily limit of ${DBL_DAILY_LIMIT.toLocaleString()} DBL exceeded.`;
     errEl.classList.add('show'); return;
@@ -539,14 +716,54 @@ function doConvert() {
   showToast(`Converted ${v.toLocaleString()} 🪙 → +${pts.toLocaleString()} pts!`);
 }
 
-function buyDoubloons(amount) {
+// ── Cashout ──
+function doCashout() {
   const u = currentUser();
   if (!u) return;
-  u.doubloons += amount;
+  const cashoutDbl = Math.floor(u.points / 2);
+  if (cashoutDbl === 0) {
+    showToast('Not enough points to cash out (minimum 2 points for 1 doubloon).');
+    return;
+  }
+  const ptsUsed = cashoutDbl * 2;
+  u.points -= ptsUsed;
+  u.doubloons += cashoutDbl;
   saveUser(u);
   updateAccount();
   updateDashboard();
-  showToast(`+${amount.toLocaleString()} Doubloons added to your account!`);
+  showToast(`Cashed out ${ptsUsed.toLocaleString()} pts → +${cashoutDbl.toLocaleString()} 🪙!`);
+}
+
+// ── Admin ──
+function updateAdmin() {
+  const db = loadDB();
+  const tbody = document.getElementById('admin-tbody');
+  tbody.innerHTML = '';
+  let totalDbl = 0;
+  if (!db.users) return;
+  Object.values(db.users).forEach(u => {
+    totalDbl += u.doubloons;
+    const tier = getTier(u.points);
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${u.username}</td>
+      <td>${u.email}</td>
+      <td>${u.points.toLocaleString()}</td>
+      <td>${u.doubloons.toLocaleString()}</td>
+      <td>${tier.charAt(0).toUpperCase() + tier.slice(1)}</td>
+      <td>${(u.totalWins || 0).toLocaleString()}</td>
+      <td>${(u.biggestWin || 0).toLocaleString()}</td>
+      <td>${(u.totalSpins || 0).toLocaleString()}</td>
+      <td>${new Date(u.created).toLocaleDateString()}</td>
+    `;
+    tbody.appendChild(row);
+    document.getElementById('total-dbl').textContent = totalDbl.toLocaleString();
+    const netProfit = -totalDbl; // negative means profit
+    const profitEl = document.getElementById('net-profit');
+    profitEl.textContent = (netProfit > 0 ? '+' : '') + netProfit.toLocaleString();
+    profitEl.style.color = netProfit >= 0 ? '#4ade80' : '#f87171'; // green for profit, red for debt
+
+  });
 }
 
 // ── Change password ──
@@ -559,7 +776,24 @@ async function changePassword() {
   const errEl  = document.getElementById('chg-error');
   const sucEl  = document.getElementById('chg-success');
   errEl.classList.remove('show'); sucEl.classList.remove('show');
+  // If using Supabase Auth, call updateUser
+  if (supabase) {
+    if (newPw.length < 8) { errEl.textContent='New password must be at least 8 characters.'; errEl.classList.add('show'); return; }
+    if (newPw !== newPw2) { errEl.textContent='New passwords do not match.'; errEl.classList.add('show'); return; }
+    try {
+      const { data, error } = await supabase.auth.updateUser({ password: newPw });
+      if (error) { errEl.textContent = sanitise(error.message || 'Password update failed'); errEl.classList.add('show'); return; }
+      sucEl.textContent = '✅ Password updated successfully.'; sucEl.classList.add('show');
+      document.getElementById('chg-old').value = '';
+      document.getElementById('chg-new').value = '';
+      document.getElementById('chg-new2').value = '';
+      return;
+    } catch (e) {
+      errEl.textContent = 'Password update failed.'; errEl.classList.add('show'); return;
+    }
+  }
 
+  // Local fallback: verify old password and update local hash
   const oldHash = await sha256(u.salt + oldPw + 'ga_casino_pepper_x9k2');
   if (oldHash !== u.hash) { errEl.textContent='Current password is incorrect.'; errEl.classList.add('show'); return; }
   if (newPw.length < 8)   { errEl.textContent='New password must be at least 8 characters.'; errEl.classList.add('show'); return; }
@@ -609,7 +843,7 @@ function initReels() {
       strip.forEach(sym => {
         const div = document.createElement('div');
         div.className = 'reel-symbol';
-        div.textContent = sym;
+        div.innerHTML = '<span class="symbol">' + sym + '</span>';
         reel.appendChild(div);
       });
     }
@@ -633,8 +867,14 @@ function pickResult() {
 
 function calcPayout(results, bet, bonus) {
   const [a,b,c] = results;
-  if (a===b && b===c) return Math.floor(bet * PAYOUTS[a] * bonus);
-  if (a===b || b===c || a===c) return Math.floor(bet * 1.5 * bonus);
+  // Three of a kind: full payout using symbol multiplier
+  if (a === b && b === c) {
+    return Math.floor(bet * (PAYOUTS[a] || 1) * (bonus || 1));
+  }
+  // Two of a kind (any two matching): return half the bet (apply tier bonus)
+  if (a === b || a === c || b === c) {
+    return Math.floor((bet * 0.5) * (bonus || 1));
+  }
   return 0;
 }
 
@@ -683,7 +923,7 @@ async function spin() {
   // Apply result
   const payout = calcPayout(results, currentBet, bonus);
   u.points += payout;
-  if (payout > currentBet) {
+  if (payout > 0) {
     u.totalWins = (u.totalWins||0) + 1;
     u.biggestWin = Math.max(u.biggestWin||0, payout);
   }
@@ -696,14 +936,14 @@ async function spin() {
 
   // Display result
   const msgEl = document.getElementById('result-msg');
-  if (payout >= currentBet * 10) {
+  if (payout >= 25) { // jackpot for 2.5x or more
     msgEl.textContent = `💎 JACKPOT! +${payout.toLocaleString()} pts!`;
     msgEl.className = 'win';
     launchConfetti();
   } else if (payout > 0) {
     msgEl.textContent = `✨ You won ${payout.toLocaleString()} pts!`;
     msgEl.className = 'win';
-    if (payout >= currentBet * 5) launchConfetti(20);
+    if (payout >= 15) launchConfetti(20);
   } else {
     msgEl.textContent = `No match — try again!`;
     msgEl.className = 'lose';
